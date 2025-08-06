@@ -4,16 +4,62 @@ import org.apache.rocketmq.client.producer.*;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageExt;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 public class TransactionProducer {
+    public static class RocketMQConfig {
+        private String namesrvAddr;
+        private String producerGroup;
+        private String topic;
+        private String tag;
+        private int retryTimes;
+        private int sendTimeout;
+
+        // Getters
+        public String getNamesrvAddr() { return namesrvAddr; }
+        public String getProducerGroup() { return producerGroup; }
+        public String getTopic() { return topic; }
+        public String getTag() { return tag; }
+        public int getRetryTimes() { return retryTimes; }
+        public int getSendTimeout() { return sendTimeout; }
+    }
+
     public static void main(String[] args) throws Exception {
+        // Load configuration from config.json
+        Gson gson = new Gson();
+        RocketMQConfig config;
+        try (InputStream inputStream = TransactionProducer.class.getClassLoader().getResourceAsStream("config.json");
+             InputStreamReader reader = new InputStreamReader(inputStream)) {
+            JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
+            JsonObject rocketMQConfig = jsonObject.getAsJsonObject("rocketmq");
+            config = gson.fromJson(rocketMQConfig, RocketMQConfig.class);
+        } catch (Exception e) {
+            System.err.println("Failed to load config.json: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
+
+        // Log the loaded JSON settings
+        System.out.println("Loaded RocketMQ Config:");
+        System.out.println("namesrvAddr: " + config.getNamesrvAddr());
+        System.out.println("producerGroup: " + config.getProducerGroup());
+        System.out.println("topic: " + config.getTopic());
+        System.out.println("tag: " + config.getTag());
+        System.out.println("retryTimes: " + config.getRetryTimes());
+        System.out.println("sendTimeout: " + config.getSendTimeout());
+
         // Configure producer
-        TransactionMQProducer producer = new TransactionMQProducer("cloudpos_order_salesorder_group");
-        producer.setNamesrvAddr("10.10.232.138:9876;10.10.232.139:9876");
-        producer.setRetryTimesWhenSendFailed(5);
-        producer.setSendMsgTimeout(15000);
+        TransactionMQProducer producer = new TransactionMQProducer(config.getProducerGroup());
+        producer.setNamesrvAddr(config.getNamesrvAddr());
+        producer.setRetryTimesWhenSendFailed(config.getRetryTimes());
+        producer.setSendMsgTimeout(config.getSendTimeout());
         producer.setVipChannelEnabled(false);
 
         // Optional: If ACL is enabled
@@ -36,60 +82,67 @@ public class TransactionProducer {
 
         // Build payload from objects
         OrderModels.Order order = new OrderModels.Order();
+        // Generate orderNo as Unix timestamp padded to 32 characters
+        long timestamp = System.currentTimeMillis();
+        String orderNo = String.format("%032d", timestamp);
+        double price = 15.9;
+        // Format orderTime as YYYYMMddHH:mm:ss
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHH:mm:ss");
+        SimpleDateFormat sdfAccountDate = new SimpleDateFormat("yyyyMMdd");
+        String orderTime = sdf.format(new java.util.Date(timestamp));
+        String accountDate = sdfAccountDate.format(new java.util.Date(timestamp));
+        String cashierNo = "7777"; //posNo 7778
+        String cardNo = "12345678"; //octopus no
+        String devid = "586ADF"; //octopus devid
+        String spid = "123456"; //octopus spid
+        String storecode = "210";
+        String barcode = storecode; //storecode + sku + checkdigits
+
         order.setHkSaleType("1");
         order.setSaleType(1);
-        order.setOrderNo("00103071750916428885");
+        order.setOrderNo(orderNo);
         order.setRegionCode("002");
         order.setCorporationCode("601");
-        order.setStoreCode("010");
-        order.setMemberCard("");
-        order.setTotalProductPrice(15.9);
-        order.setTotalPayAmount(11.9);
+        order.setStoreCode(storecode);
+        order.setTotalProductPrice(price);
+        order.setTotalPayAmount(price);
         order.setTotalInvoiceAmount(0);
         order.setBonusPointAmount(0);
-        order.setRealPayAmount(0);
+        order.setRealPayAmount(price);
         order.setTotalGivePoint(0);
         order.setGivePointFlag(0);
         order.setReturnPointFlag(0);
         order.setReturnCouponFlag(0);
-        order.setOrderTime("2025062613:42:41");
-        order.setAccountDate("20250626");
-        order.setCashierNo("6210181");
-        order.setPosNo("307");
-        order.setReceiptNo("2506263075635");
-        order.setOriginalOrderNo("");
-        order.setOriginalPosNo("");
-        order.setOriginalReceiptNo("");
-        order.setReasonCode("");
-        order.setStaffNo("");
+        order.setOrderTime(orderTime);
+        order.setAccountDate(accountDate);
+        order.setCashierNo(cashierNo);
+        order.setPosNo(cashierNo);
+        order.setReceiptNo(cashierNo);
         order.setQuicklyFlag(0);
         order.setHkSourceId("90");
-        order.setOriginalHkSaleType("");
         order.setHistoricalOrders(0);
-        order.setRefundMemoStatus(null);
-        order.setDepositPenalty("");
-        order.setMemberFeesFlag(0);
-        order.setBalancePaymentStatus(0);
-        order.setChangeAmt(0.0);
-        order.setOriginalHkSourceId("");
-        order.setExtensionData("");
         order.setDeliveryInfo(null);
 
         // Payment list
         List<OrderModels.Payment> paymentList = new ArrayList<>();
         OrderModels.Payment payment = new OrderModels.Payment();
-        payment.setPayCode("CSH");
-        payment.setPayName("CASH");
-        payment.setPayAmount(11.9);
+        if (price < 2.0) {
+            payment.setPayCode("VM1");
+            payment.setPayName("VM OCTOPUS 1 SALES");
+        } else if (price >= 2.0 && price <= 10.0) {
+            payment.setPayCode("VM2");
+            payment.setPayName("VM OCTOPUS 2 SALES");
+        } else {
+            payment.setPayCode("VM3");
+            payment.setPayName("VM OCTOPUS 3 SALES");
+        }
+        payment.setPayAmount(price);
         payment.setOriginalValue(0);
         payment.setPayNo(null);
-        payment.setSerialNo("0");
-        payment.setCardNo("");
-        payment.setDeviceCode("");
-        payment.setOrgNo("");
-        payment.setAuthCode("");
-        payment.setTemplateId(0);
-        payment.setInvoiceFlag(0);
+        payment.setCardNo(cardNo);
+        payment.setDeviceCode(devid);
+        payment.setOrgNo(spid);
+        payment.setAuthCode(spid);
         payment.setGivePoint(0);
         payment.setPayType(0);
         paymentList.add(payment);
@@ -99,26 +152,20 @@ public class TransactionProducer {
         List<OrderModels.Item> itemList = new ArrayList<>();
         OrderModels.Item item = new OrderModels.Item();
         item.setOrderItemNo(1);
-        item.setOriginalOrderItemNo(0);
         item.setSkuName("TVHC塑膠圓形水樽500毫升灰色(20/80)");
-        item.setSkuProperty("");
-        item.setItemCode("030271787");
-        item.setScanCode("4549741938327");
-        item.setBarcode("4549741938327");
-        item.setSaleQty(1.0);
-        item.setSalePrice(15.9);
-        item.setPayAmount(11.9);
+        item.setItemCode("090000035"); //9 digits
+        item.setBarcode(barcode+item.getItemCode()+"1");
+        item.setSaleQty(1);
+        item.setSalePrice(price);
+        item.setPayAmount(price);
         item.setBonusPointAmount(0);
-        item.setPromoDiscount(4);
+        item.setPromoDiscount(0);
         item.setCouponDiscount(0);
         item.setCouponAmount(0);
         item.setPointAmount(0);
         item.setGivePoint(0);
-        item.setSaleUnit("");
-        item.setSellerNo("");
         item.setItemType(0);
         item.setSaleType(0);
-        item.setErpCategory("");
         item.setPromoList(null);
         item.setCouponList(null);
         item.setPointList(null);
@@ -126,12 +173,11 @@ public class TransactionProducer {
         order.setItemList(itemList);
 
         // Serialize to JSON
-        Gson gson = new Gson();
         String transactionPayload = gson.toJson(order);
 
         Message msg = new Message(
-                "cloudpos_order_salesorder_topic",
-                "salesOrderTag",
+                config.getTopic(),
+                config.getTag(),
                 "00103071750916428885",
                 transactionPayload.getBytes("UTF-8")
         );
@@ -147,7 +193,7 @@ public class TransactionProducer {
             e.printStackTrace();
         }
 
-        Thread.sleep(60000);
+        Thread.sleep(10000);
         producer.shutdown();
     }
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>C:\Users\User\Desktop\Code\Aeon.RocketMQTransaction\Aeon.RocketMQTransaction\target\RocketMQTransaction-1.0-SNAPSHOT.jar</jar>
+  <outfile>C:\Users\User\Desktop\Code\Aeon.RocketMQTransaction\Aeon.RocketMQTransaction\target\RocketMQTransaction-1.0-SNAPSHOT.exe</outfile>
+  <errTitle></errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl></downloadUrl>
+  <supportUrl></supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon></icon>
+  <jre>
+    <path>%JAVA_HOME%;%PATH%</path>
+    <requiresJdk>false</requiresJdk>
+    <requires64Bit>false</requires64Bit>
+    <minVersion>1.8.0</minVersion>
+    <maxVersion></maxVersion>
+    <opt>-Denv.classpath=classpath;config.json=&quot;%CLASSPATH=CLASSPATH;config.json%&quot;</opt>
+  </jre>
+</launch4jConfig>

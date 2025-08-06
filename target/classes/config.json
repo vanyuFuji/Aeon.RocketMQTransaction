@@ -1,0 +1,10 @@
+{
+  "rocketmq": {
+    "namesrvAddr": "10.10.232.138:9876;10.10.232.139:9876",
+    "producerGroup": "cloudpos_order_salesorder_group",
+    "topic": "cloudpos_order_salesorder_topic",
+    "tag": "salesOrderTag",
+    "retryTimes": 5,
+    "sendTimeout": 15000
+  }
+}

@@ -11,7 +11,6 @@ public class OrderModels {
         private String regionCode;
         private String corporationCode;
         private String storeCode;
-        private String memberCard;
         private double totalProductPrice;
         private double totalPayAmount;
         private double totalInvoiceAmount;
@@ -26,25 +25,13 @@ public class OrderModels {
         private String cashierNo;
         private String posNo;
         private String receiptNo;
-        private String originalOrderNo;
-        private String originalPosNo;
-        private String originalReceiptNo;
-        private String reasonCode;
-        private String staffNo;
         private List<Item> itemList;
         private List<Payment> paymentList;
         private Object deliveryInfo;
         private int quicklyFlag;
         private String hkSourceId;
-        private String originalHkSaleType;
         private int historicalOrders;
-        private Integer refundMemoStatus;
-        private String depositPenalty;
-        private int memberFeesFlag;
-        private int balancePaymentStatus;
-        private double changeAmt;
-        private String originalHkSourceId;
-        private String extensionData;
+
 
         // Getters and Setters
         public String getHkSaleType() { return hkSaleType; }
@@ -59,8 +46,6 @@ public class OrderModels {
         public void setCorporationCode(String corporationCode) { this.corporationCode = corporationCode; }
         public String getStoreCode() { return storeCode; }
         public void setStoreCode(String storeCode) { this.storeCode = storeCode; }
-        public String getMemberCard() { return memberCard; }
-        public void setMemberCard(String memberCard) { this.memberCard = memberCard; }
         public double getTotalProductPrice() { return totalProductPrice; }
         public void setTotalProductPrice(double totalProductPrice) { this.totalProductPrice = totalProductPrice; }
         public double getTotalPayAmount() { return totalPayAmount; }
@@ -89,16 +74,6 @@ public class OrderModels {
         public void setPosNo(String posNo) { this.posNo = posNo; }
         public String getReceiptNo() { return receiptNo; }
         public void setReceiptNo(String receiptNo) { this.receiptNo = receiptNo; }
-        public String getOriginalOrderNo() { return originalOrderNo; }
-        public void setOriginalOrderNo(String originalOrderNo) { this.originalOrderNo = originalOrderNo; }
-        public String getOriginalPosNo() { return originalPosNo; }
-        public void setOriginalPosNo(String originalPosNo) { this.originalPosNo = originalPosNo; }
-        public String getOriginalReceiptNo() { return originalReceiptNo; }
-        public void setOriginalReceiptNo(String originalReceiptNo) { this.originalReceiptNo = originalReceiptNo; }
-        public String getReasonCode() { return reasonCode; }
-        public void setReasonCode(String reasonCode) { this.reasonCode = reasonCode; }
-        public String getStaffNo() { return staffNo; }
-        public void setStaffNo(String staffNo) { this.staffNo = staffNo; }
         public List<Item> getItemList() { return itemList; }
         public void setItemList(List<Item> itemList) { this.itemList = itemList; }
         public List<Payment> getPaymentList() { return paymentList; }
@@ -109,24 +84,9 @@ public class OrderModels {
         public void setQuicklyFlag(int quicklyFlag) { this.quicklyFlag = quicklyFlag; }
         public String getHkSourceId() { return hkSourceId; }
         public void setHkSourceId(String hkSourceId) { this.hkSourceId = hkSourceId; }
-        public String getOriginalHkSaleType() { return originalHkSaleType; }
-        public void setOriginalHkSaleType(String originalHkSaleType) { this.originalHkSaleType = originalHkSaleType; }
         public int getHistoricalOrders() { return historicalOrders; }
         public void setHistoricalOrders(int historicalOrders) { this.historicalOrders = historicalOrders; }
-        public Integer getRefundMemoStatus() { return refundMemoStatus; }
-        public void setRefundMemoStatus(Integer refundMemoStatus) { this.refundMemoStatus = refundMemoStatus; }
-        public String getDepositPenalty() { return depositPenalty; }
-        public void setDepositPenalty(String depositPenalty) { this.depositPenalty = depositPenalty; }
-        public int getMemberFeesFlag() { return memberFeesFlag; }
-        public void setMemberFeesFlag(int memberFeesFlag) { this.memberFeesFlag = memberFeesFlag; }
-        public int getBalancePaymentStatus() { return balancePaymentStatus; }
-        public void setBalancePaymentStatus(int balancePaymentStatus) { this.balancePaymentStatus = balancePaymentStatus; }
-        public double getChangeAmt() { return changeAmt; }
-        public void setChangeAmt(double changeAmt) { this.changeAmt = changeAmt; }
-        public String getOriginalHkSourceId() { return originalHkSourceId; }
-        public void setOriginalHkSourceId(String originalHkSourceId) { this.originalHkSourceId = originalHkSourceId; }
-        public String getExtensionData() { return extensionData; }
-        public void setExtensionData(String extensionData) { this.extensionData = extensionData; }
+
     }
 
     public static class Payment {
@@ -135,13 +95,10 @@ public class OrderModels {
         private double payAmount;
         private double originalValue;
         private Object payNo;
-        private String serialNo;
         private String cardNo;
         private String deviceCode;
         private String orgNo;
         private String authCode;
-        private int templateId;
-        private int invoiceFlag;
         private double givePoint;
         private int payType;
 
@@ -156,9 +113,7 @@ public class OrderModels {
         public void setOriginalValue(double originalValue) { this.originalValue = originalValue; }
         public Object getPayNo() { return payNo; }
         public void setPayNo(Object payNo) { this.payNo = payNo; }
-        public String getSerialNo() { return serialNo; }
-        public void setSerialNo(String serialNo) { this.serialNo = serialNo; }
-        public String getCardNo() { return cardNo; }
+         public String getCardNo() { return cardNo; }
         public void setCardNo(String cardNo) { this.cardNo = cardNo; }
         public String getDeviceCode() { return deviceCode; }
         public void setDeviceCode(String deviceCode) { this.deviceCode = deviceCode; }
@@ -166,10 +121,6 @@ public class OrderModels {
         public void setOrgNo(String orgNo) { this.orgNo = orgNo; }
         public String getAuthCode() { return authCode; }
         public void setAuthCode(String authCode) { this.authCode = authCode; }
-        public int getTemplateId() { return templateId; }
-        public void setTemplateId(int templateId) { this.templateId = templateId; }
-        public int getInvoiceFlag() { return invoiceFlag; }
-        public void setInvoiceFlag(int invoiceFlag) { this.invoiceFlag = invoiceFlag; }
         public double getGivePoint() { return givePoint; }
         public void setGivePoint(double givePoint) { this.givePoint = givePoint; }
         public int getPayType() { return payType; }
@@ -178,11 +129,10 @@ public class OrderModels {
 
     public static class Item {
         private int orderItemNo;
-        private int originalOrderItemNo;
         private String skuName;
-        private String skuProperty;
+
         private String itemCode;
-        private String scanCode;
+
         private String barcode;
         private double saleQty;
         private double salePrice;
@@ -193,11 +143,10 @@ public class OrderModels {
         private double couponAmount;
         private double pointAmount;
         private double givePoint;
-        private String saleUnit;
-        private String sellerNo;
+
         private int itemType;
         private int saleType;
-        private String erpCategory;
+
         private Object promoList;
         private Object couponList;
         private Object pointList;
@@ -205,17 +154,11 @@ public class OrderModels {
         // Getters and Setters
         public int getOrderItemNo() { return orderItemNo; }
         public void setOrderItemNo(int orderItemNo) { this.orderItemNo = orderItemNo; }
-        public int getOriginalOrderItemNo() { return originalOrderItemNo; }
-        public void setOriginalOrderItemNo(int originalOrderItemNo) { this.originalOrderItemNo = originalOrderItemNo; }
-        public String getSkuName() { return skuName; }
+           public String getSkuName() { return skuName; }
         public void setSkuName(String skuName) { this.skuName = skuName; }
-        public String getSkuProperty() { return skuProperty; }
-        public void setSkuProperty(String skuProperty) { this.skuProperty = skuProperty; }
-        public String getItemCode() { return itemCode; }
+           public String getItemCode() { return itemCode; }
         public void setItemCode(String itemCode) { this.itemCode = itemCode; }
-        public String getScanCode() { return scanCode; }
-        public void setScanCode(String scanCode) { this.scanCode = scanCode; }
-        public String getBarcode() { return barcode; }
+         public String getBarcode() { return barcode; }
         public void setBarcode(String barcode) { this.barcode = barcode; }
         public double getSaleQty() { return saleQty; }
         public void setSaleQty(double saleQty) { this.saleQty = saleQty; }
@@ -235,17 +178,11 @@ public class OrderModels {
         public void setPointAmount(double pointAmount) { this.pointAmount = pointAmount; }
         public double getGivePoint() { return givePoint; }
         public void setGivePoint(double givePoint) { this.givePoint = givePoint; }
-        public String getSaleUnit() { return saleUnit; }
-        public void setSaleUnit(String saleUnit) { this.saleUnit = saleUnit; }
-        public String getSellerNo() { return sellerNo; }
-        public void setSellerNo(String sellerNo) { this.sellerNo = sellerNo; }
-        public int getItemType() { return itemType; }
+         public int getItemType() { return itemType; }
         public void setItemType(int itemType) { this.itemType = itemType; }
         public int getSaleType() { return saleType; }
         public void setSaleType(int saleType) { this.saleType = saleType; }
-        public String getErpCategory() { return erpCategory; }
-        public void setErpCategory(String erpCategory) { this.erpCategory = erpCategory; }
-        public Object getPromoList() { return promoList; }
+           public Object getPromoList() { return promoList; }
         public void setPromoList(Object promoList) { this.promoList = promoList; }
         public Object getCouponList() { return couponList; }
         public void setCouponList(Object couponList) { this.couponList = couponList; }
