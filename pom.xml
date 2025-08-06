@@ -10,6 +10,11 @@
             <artifactId>rocketmq-client</artifactId>
             <version>4.9.4</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
     </dependencies>
     <repositories>
         <repository>
@@ -22,7 +27,6 @@
     </repositories>
     <build>
         <plugins>
-            <!-- Maven Shade Plugin to create a fat JAR with dependencies -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
