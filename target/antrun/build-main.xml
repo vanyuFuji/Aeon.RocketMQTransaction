@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="maven-antrun-" default="main">
+  <target name="main">
+    <delete file="C:\Users\User\Desktop\Code\Aeon.RocketMQTransaction\Aeon.RocketMQTransaction\target/original-RocketMQTransaction-1.0-SNAPSHOT.jar" failOnError="false" />
+  </target>
+</project>

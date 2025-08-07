@@ -1,7 +1,10 @@
-org\example\OrderModels$Item.class
 org\example\TransactionProducer$TransactionListenerImpl.class
-org\example\OrderModels$Order.class
-org\example\OrderModels$Payment.class
+org\example\model\OrderModels$Item.class
+org\example\TransactionProducer$AppConfig.class
+org\example\model\VBeTransaction.class
+org\example\model\OrderModels$Payment.class
 org\example\TransactionProducer$RocketMQConfig.class
+org\example\model\OrderModels.class
+org\example\mapper\VBeTransactionMapper.class
 org\example\TransactionProducer.class
-org\example\OrderModels.class
+org\example\model\OrderModels$Order.class

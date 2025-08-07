@@ -6,5 +6,8 @@
     "tag": "salesOrderTag",
     "retryTimes": 5,
     "sendTimeout": 15000
+  },
+  "app": {
+    "sendInterval": 60000
   }
 }
