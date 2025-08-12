@@ -3,13 +3,14 @@ package org.example.model;
 import java.sql.Timestamp;
 
 public class VBeTransaction {
+    private Long id;
     private Timestamp time;
     private String region;
     private String locationName;
     private String machineName;
     private String machineNumber;
     private String devid;
-    private Integer slot;
+    private String slot;
     private String productName;
     private String barCode;
     private String productTypeName;
@@ -18,8 +19,12 @@ public class VBeTransaction {
     private String payTransactionId;
     private String payUserId;
     private String payOutTradeNo;
+    private Boolean isProcessed;
+    private Timestamp processedDateTime;
+    private String processedId;
 
-    // Getters and setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public Timestamp getTime() { return time; }
     public void setTime(Timestamp time) { this.time = time; }
     public String getRegion() { return region; }
@@ -32,8 +37,8 @@ public class VBeTransaction {
     public void setMachineNumber(String machineNumber) { this.machineNumber = machineNumber; }
     public String getDevid() { return devid; }
     public void setDevid(String devid) { this.devid = devid; }
-    public Integer getSlot() { return slot; }
-    public void setSlot(Integer slot) { this.slot = slot; }
+    public String getSlot() { return slot; }
+    public void setSlot(String slot) { this.slot = slot; }
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }
     public String getBarCode() { return barCode; }
@@ -50,4 +55,10 @@ public class VBeTransaction {
     public void setPayUserId(String payUserId) { this.payUserId = payUserId; }
     public String getPayOutTradeNo() { return payOutTradeNo; }
     public void setPayOutTradeNo(String payOutTradeNo) { this.payOutTradeNo = payOutTradeNo; }
+    public Boolean getIsProcessed() { return isProcessed; }
+    public void setIsProcessed(Boolean isProcessed) { this.isProcessed = isProcessed; }
+    public Timestamp getProcessedDateTime() { return processedDateTime; }
+    public void setProcessedDateTime(Timestamp processedDateTime) { this.processedDateTime = processedDateTime; }
+    public String getProcessedId() { return processedId; }
+    public void setProcessedId(String processedId) { this.processedId = processedId; }
 }
