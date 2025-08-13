@@ -7,7 +7,7 @@
         productName, barCode, ProductTypeName, Amount, PayType, PayTransactionId,
         PayUserID, PayOutTradeNo, isProcessed, ProcessedDateTime, ProcessedId
         FROM dbo.V_BE_Transaction
-        WHERE (isProcessed = 0 OR isProcessed IS NULL) AND Time &lt;= '2025-07-10'
+        WHERE (isProcessed = 0 OR isProcessed IS NULL) --AND cast([Time] as date) = cast(getdate() as date)
         ORDER BY Time
     </select>
     <update id="markAsProcessed">

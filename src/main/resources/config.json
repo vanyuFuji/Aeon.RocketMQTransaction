@@ -8,6 +8,17 @@
     "sendTimeout": 15000
   },
   "app": {
-    "sendInterval": 60000
+    "sendInterval": 60000,
+    "testProductmode": true,
+    "storeCode": [
+      {
+        "code": "071",
+        "machine": "Aeon-0001"
+      },
+      {
+        "code": "789",
+        "machine": "Aeon-0002"
+      }
+    ]
   }
 }

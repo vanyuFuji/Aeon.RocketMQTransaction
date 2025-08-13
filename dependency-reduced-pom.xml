@@ -5,6 +5,14 @@
   <artifactId>RocketMQTransaction</artifactId>
   <version>1.0-SNAPSHOT</version>
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>org/example/mapper/*.xml</exclude>
+        </excludes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
@@ -52,10 +60,17 @@
                   <directory>src/main/resources</directory>
                   <includes>
                     <include>config.json</include>
+                    <include>testproduct.json</include>
                     <include>run-jar.ps1</include>
                     <include>logback.xml</include>
                     <include>mybatis-config.xml</include>
-                    <include>org/example/mapper/*.xml</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>src/main/resources/org/example/mapper</directory>
+                  <targetPath>org/example/mapper</targetPath>
+                  <includes>
+                    <include>VBeTransactionMapper.xml</include>
                   </includes>
                 </resource>
               </resources>
@@ -80,6 +95,14 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>

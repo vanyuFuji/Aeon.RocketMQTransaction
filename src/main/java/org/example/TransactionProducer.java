@@ -1,5 +1,6 @@
 package org.example;
 
+import com.google.gson.reflect.TypeToken;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -15,18 +16,27 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
+import java.util.Random;
 
 public class TransactionProducer {
+    private static final Random random = new Random();
     private static final Logger logger = LoggerFactory.getLogger(TransactionProducer.class);
-
+    private static TransactionMQProducer producer = null; // Track producer state
+    private static SqlSessionFactory sqlSessionFactory;
     public static class RocketMQConfig {
         private String namesrvAddr;
         private String producerGroup;
@@ -61,13 +71,29 @@ public class TransactionProducer {
         }
     }
 
+    public static class TestProductMapping{
+        private String productName;
+        private String itemCode;
+
+        public String getProductName(){return productName;}
+        public String getItemCode(){return itemCode;}
+    }
+
     public static class AppConfig {
         private long sendInterval;
+        private List<StoreCodeMapping> storeCode;
+        private boolean testProductmode;
 
-        // Getter
-        public long getSendInterval() {
-            return sendInterval;
-        }
+        public boolean getTestProudctMode(){ return testProductmode;}
+        public long getSendInterval() { return sendInterval; }
+        public List<StoreCodeMapping> getStorecode() { return storeCode; }
+    }
+    public static class StoreCodeMapping {
+        private String code;
+        private String machine;
+
+        public String getCode() { return code; }
+        public String getMachine() { return machine; }
     }
 
     private static int calculateEAN13CheckDigit(String barcode) {
@@ -95,6 +121,9 @@ public class TransactionProducer {
             logger.error("config.json not found in the same directory: {}", configPath.toAbsolutePath());
             throw new java.io.FileNotFoundException("Error: config.json not found in the same directory as the application");
         }
+        Map<String, String> storeCodeMap = new HashMap<>();
+        List<TestProductMapping> productList = new ArrayList<>();
+
         try (InputStream inputStream = Files.newInputStream(configPath);
              InputStreamReader reader = new InputStreamReader(inputStream)) {
             JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
@@ -108,14 +137,46 @@ public class TransactionProducer {
             logger.debug("retryTimes: {}", rocketMQConfig.getRetryTimes());
             logger.debug("sendTimeout: {}", rocketMQConfig.getSendTimeout());
             logger.info("Loaded App Config: sendInterval={}ms", appConfig.getSendInterval());
+            logger.info("Test Product Mode: {}", appConfig.getTestProudctMode());
+            // Build storecode mapping
+            if (appConfig.getStorecode() != null) {
+                for (StoreCodeMapping mapping : appConfig.getStorecode()) {
+                    storeCodeMap.put(mapping.getMachine(), mapping.getCode());
+                    logger.debug("Storecode mapping: machine={} -> code={}", mapping.getMachine(), mapping.getCode());
+                }
+            } else {
+                logger.warn("No storecode mappings found in config.json");
+            }
         } catch (Exception e) {
             logger.error("Failed to load config.json: {}", e.getMessage(), e);
             throw e;
         }
 
+        // Load testproduct.json for product list
+        if (appConfig.getTestProudctMode()) {
+            java.nio.file.Path productPath = Paths.get("testproduct.json");
+            if (!Files.exists(productPath)) {
+                logger.error("testproduct.json not found in the same directory: {}", productPath.toAbsolutePath());
+                throw new java.io.FileNotFoundException("Error: testproduct.json not found");
+            }
+            try (InputStream inputStream = Files.newInputStream(productPath);
+                 InputStreamReader reader = new InputStreamReader(inputStream)) {
+                JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
+                productList = gson.fromJson(jsonObject.getAsJsonArray("products"),
+                        new TypeToken<List<TestProductMapping>>(){}.getType());
+                logger.info("Loaded {} product mappings from testproduct.json", productList.size());
+                for (TestProductMapping product : productList) {
+                    logger.debug("Product mapping: itemCode={} -> productName={}", product.getItemCode(), product.getProductName());
+                }
+            } catch (Exception e) {
+                logger.error("Failed to load testproduct.json: {}", e.getMessage(), e);
+                throw e;
+            }
+        }
+
         // Initialize MyBatis
-        SqlSessionFactory sqlSessionFactory = null; // Initialize to null
-        try (InputStream inputStream = Resources.getResourceAsStream("mybatis-config.xml")) {
+        try (InputStream inputStream = new FileInputStream("mybatis-config.xml")) {
+            logger.debug("Loading mybatis-config.xml from: {}", new File("mybatis-config.xml").getAbsolutePath());
             sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
             logger.info("Initialized MyBatis SqlSessionFactory");
         } catch (Exception e) {
@@ -126,26 +187,7 @@ public class TransactionProducer {
             throw new RuntimeException("SqlSessionFactory is null after initialization attempt");
         }
 
-        // Configure RocketMQ producer
-        TransactionMQProducer producer = new TransactionMQProducer(rocketMQConfig.getProducerGroup());
-        producer.setNamesrvAddr(rocketMQConfig.getNamesrvAddr());
-        producer.setRetryTimesWhenSendFailed(rocketMQConfig.getRetryTimes());
-        producer.setSendMsgTimeout(rocketMQConfig.getSendTimeout());
-        producer.setVipChannelEnabled(false);
-        producer.setTransactionListener(new TransactionListenerImpl());
-        try {
-            producer.start();
-            logger.info("Producer started successfully");
-        } catch (Exception e) {
-            logger.error("Failed to start producer: {}", e.getMessage(), e);
-            throw e;
-        }
 
-        // Add shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            producer.shutdown();
-            logger.info("Producer shut down via shutdown hook");
-        }));
 
         // Worker loop: poll database at intervals
         while (true) {
@@ -159,6 +201,30 @@ public class TransactionProducer {
                     if (transactions == null || transactions.isEmpty()) {
                         logger.info("No unprocessed data found in V_BE_Transaction");
                     } else {
+                        // Initialize producer only when transactions are found
+                        if (producer == null) {
+                            logger.info("Found {} unprocessed transactions. Initializing producer.", transactions.size());
+                            producer = new TransactionMQProducer(rocketMQConfig.getProducerGroup());
+                            producer.setNamesrvAddr(rocketMQConfig.getNamesrvAddr());
+                            producer.setRetryTimesWhenSendFailed(rocketMQConfig.getRetryTimes());
+                            producer.setSendMsgTimeout(rocketMQConfig.getSendTimeout());
+                            producer.setVipChannelEnabled(false);
+                            producer.setTransactionListener(new TransactionListenerImpl());
+                            try {
+                                producer.start();
+                                logger.info("Producer started successfully");
+                                // Add shutdown hook
+                                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                                    if (producer != null) {
+                                        producer.shutdown();
+                                        logger.info("Producer shut down via shutdown hook");
+                                    }
+                                }));
+                            } catch (Exception e) {
+                                logger.error("Failed to start producer: {}", e.getMessage(), e);
+                                throw e;
+                            }
+                        }
                         for (VBeTransaction transaction : transactions) {
                             // Log raw row data
 //                            logger.info("Raw row data: Time={}, region={}, locationName={}, machineName={}, machineNumber={}, " +
@@ -171,7 +237,7 @@ public class TransactionProducer {
 //                                    transaction.getPayTransactionId(), transaction.getPayUserId(), transaction.getPayOutTradeNo());
 
                             // Process transaction using BuildModel
-                            OrderModels.Order order = BuildModel(transaction, gson);
+                            OrderModels.Order order = BuildModel(transaction, gson, storeCodeMap, productList, appConfig.getTestProudctMode());
 
                             // Serialize to JSON
                             String transactionPayload = gson.toJson(order);
@@ -219,7 +285,8 @@ public class TransactionProducer {
         }
     }
 
-    private static OrderModels.Order BuildModel(VBeTransaction transaction, Gson gson) {
+    private static OrderModels.Order BuildModel(VBeTransaction transaction, Gson gson,Map<String, String> storeCodeMap
+    ,List<TestProductMapping> productList, boolean testProductMode) {
         OrderModels.Order order = new OrderModels.Order();
         String orderNo;
         if (transaction.getId() != null && transaction.getMachineName() != null) {
@@ -238,15 +305,28 @@ public class TransactionProducer {
         logger.debug("Generated orderNo: {}", orderNo);
 
         double price = transaction.getAmount() != null ? transaction.getAmount() : 0.1;
-        String cashierNo = "7777";
+        String cashierNo = "0000000";
+        String posNo = "777";//first 777, second 888 same shop
         String cardNo = transaction.getPayUserId();
         String devid = transaction.getDevid();
         String orgNo = "19266";
         String authcode = "888";
-        String storecode = "210";
+        String storecode = storeCodeMap.getOrDefault(transaction.getMachineName(), "071").toString(); // Default to 210
         String regioncode = "002";
         String corpcode = "601";
+        String barcodeprefix = "210";
         String itemcode = transaction.getBarCode();
+        String skuname;
+        if (testProductMode && !productList.isEmpty()) {
+            TestProductMapping product = productList.get(random.nextInt(productList.size()));
+            itemcode = product.getItemCode();
+            skuname = product.getProductName();
+            logger.debug("Test mode: Selected random product - itemCode={}, productName={}", itemcode, skuname);
+        } else {
+            itemcode = transaction.getBarCode();
+            skuname = transaction.getProductName() != null ? transaction.getProductName() : "Unknown Product";
+        }
+
         if (itemcode == null || itemcode.trim().isEmpty()) {
             itemcode = "000000000"; // Default for null/empty
         } else {
@@ -260,17 +340,24 @@ public class TransactionProducer {
                 itemcode = String.format("%09d", Long.parseLong(itemcode)); // Pad to 9 digits
             }
         }
-        String skuname = transaction.getProductName() != null ? transaction.getProductName() : "Unknown Product";
         String orderTime = transaction.getTime() != null ?
                 new SimpleDateFormat("yyyyMMddHH:mm:ss").format(transaction.getTime()) : "";
         String accountDate = transaction.getTime() != null ?
                 new SimpleDateFormat("yyyyMMdd").format(transaction.getTime()) : "";
 
-        String barcode = storecode + itemcode;
+        String barcode = barcodeprefix + itemcode;
 
         int checkDigit = calculateEAN13CheckDigit(barcode);
         barcode = barcode + checkDigit;
 
+        // Set ignoreAccountDate based on transaction time
+        boolean ignoreAccountDate = true;
+        if (transaction.getTime() != null) {
+            LocalDate transactionDate = transaction.getTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate today = LocalDate.now(ZoneId.systemDefault()); // Today is 2025-08-13
+            ignoreAccountDate = !transactionDate.isEqual(today);
+            logger.debug("Transaction date: {}, Today: {}, ignoreAccountDate: {}", transactionDate, today, ignoreAccountDate);
+        }
         order.setHkSaleType("1");
         order.setSaleType(1);
         order.setRegionCode(regioncode);
@@ -289,13 +376,13 @@ public class TransactionProducer {
         order.setOrderTime(orderTime);
         order.setAccountDate(accountDate);
         order.setCashierNo(cashierNo);
-        order.setPosNo(cashierNo);
+        order.setPosNo(posNo);
         order.setReceiptNo(transaction.getId().toString());
         order.setQuicklyFlag(0);
         order.setHkSourceId("90");
         order.setHistoricalOrders(0);
         order.setDeliveryInfo(null);
-
+        order.setIgnoreAccountDate(true); // Add ignoreAccountDate property
 
         // Payment list
         List<OrderModels.Payment> paymentList = new ArrayList<>();

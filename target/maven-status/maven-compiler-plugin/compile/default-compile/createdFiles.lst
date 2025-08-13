@@ -1,6 +1,8 @@
 org\example\TransactionProducer$TransactionListenerImpl.class
+org\example\TransactionProducer$1.class
 org\example\model\OrderModels$Item.class
 org\example\TransactionProducer$AppConfig.class
+org\example\TransactionProducer$StoreCodeMapping.class
 org\example\model\VBeTransaction.class
 org\example\model\OrderModels$Payment.class
 org\example\TransactionProducer$RocketMQConfig.class
@@ -8,3 +10,4 @@ org\example\model\OrderModels.class
 org\example\mapper\VBeTransactionMapper.class
 org\example\TransactionProducer.class
 org\example\model\OrderModels$Order.class
+org\example\TransactionProducer$TestProductMapping.class

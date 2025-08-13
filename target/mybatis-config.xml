@@ -14,6 +14,6 @@
         </environment>
     </environments>
     <mappers>
-        <mapper resource="org/example/mapper/VBeTransactionMapper.xml"/>
+        <mapper url="file:org/example/mapper/VBeTransactionMapper.xml"/>
     </mappers>
 </configuration>

@@ -31,7 +31,7 @@ public class OrderModels {
         private int quicklyFlag;
         private String hkSourceId;
         private int historicalOrders;
-
+        private boolean ignoreAccountDate;
 
         // Getters and Setters
         public String getHkSaleType() { return hkSaleType; }
@@ -86,7 +86,8 @@ public class OrderModels {
         public void setHkSourceId(String hkSourceId) { this.hkSourceId = hkSourceId; }
         public int getHistoricalOrders() { return historicalOrders; }
         public void setHistoricalOrders(int historicalOrders) { this.historicalOrders = historicalOrders; }
-
+        public boolean getIgnoreAccountDate(){return ignoreAccountDate;}
+        public void setIgnoreAccountDate(boolean ignoreAccountDate) { this.ignoreAccountDate=ignoreAccountDate;}
     }
 
     public static class Payment {
