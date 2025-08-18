@@ -13,11 +13,13 @@
     "storeCode": [
       {
         "code": "071",
-        "machine": "Aeon-0001"
+        "machine": "Aeon-0001",
+        "isVYoctopus":true
       },
       {
         "code": "789",
-        "machine": "Aeon-0002"
+        "machine": "Aeon-0002",
+        "isVYoctopus":true
       }
     ]
   }

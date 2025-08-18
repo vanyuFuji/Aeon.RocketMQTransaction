@@ -10,20 +10,40 @@
         </filter>
     </appender>
 
-    <!-- File Appender for log.log -->
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>C:/Users/Vanyufuji/Desktop/RocketMQ/log/log.log</file>
+    <!-- Rolling File Appender for log.log -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/log.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Daily rollover with size limit, appending index for same-day files -->
+            <fileNamePattern>log/log-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!-- Each file limited to 1MB -->
+            <maxFileSize>1MB</maxFileSize>
+            <!-- Keep 30 days of history -->
+            <maxHistory>30</maxHistory>
+            <!-- Total size cap of 1GB -->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>INFO</level>
+            <level>DEBUG</level>
         </filter>
     </appender>
 
-    <!-- File Appender for error.log -->
-    <appender name="ERROR_FILE" class="ch.qos.logback.core.FileAppender">
-        <file>C:/Users/Vanyufuji/Desktop/RocketMQ/log/error.log</file>
+    <!-- Rolling File Appender for error.log -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Daily rollover with size limit, appending index for same-day files -->
+            <fileNamePattern>log/error-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!-- Each file limited to 1MB -->
+            <maxFileSize>1MB</maxFileSize>
+            <!-- Keep 30 days of history -->
+            <maxHistory>30</maxHistory>
+            <!-- Total size cap of 1GB -->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
@@ -33,12 +53,12 @@
     </appender>
 
     <!-- Loggers -->
-    <logger name="org.apache.ibatis" level="INFO"/>
-    <logger name="org.example" level="INFO"/>
-    <logger name="java.sql" level="INFO"/>
+    <logger name="org.apache.ibatis" level="DEBUG"/>
+    <logger name="org.example" level="DEBUG"/>
+    <logger name="java.sql" level="DEBUG"/>
 
     <!-- Root Logger -->
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
         <appender-ref ref="ERROR_FILE"/>

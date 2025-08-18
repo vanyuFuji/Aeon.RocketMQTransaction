@@ -91,9 +91,11 @@ public class TransactionProducer {
     public static class StoreCodeMapping {
         private String code;
         private String machine;
+        private boolean isVYoctopus;
 
         public String getCode() { return code; }
         public String getMachine() { return machine; }
+        public boolean getIsVYoctopus() { return isVYoctopus; }
     }
 
     private static int calculateEAN13CheckDigit(String barcode) {
@@ -121,7 +123,8 @@ public class TransactionProducer {
             logger.error("config.json not found in the same directory: {}", configPath.toAbsolutePath());
             throw new java.io.FileNotFoundException("Error: config.json not found in the same directory as the application");
         }
-        Map<String, String> storeCodeMap = new HashMap<>();
+
+        Map<String, StoreCodeMapping> storeCodeMap = new HashMap<>();
         List<TestProductMapping> productList = new ArrayList<>();
 
         try (InputStream inputStream = Files.newInputStream(configPath);
@@ -141,8 +144,9 @@ public class TransactionProducer {
             // Build storecode mapping
             if (appConfig.getStorecode() != null) {
                 for (StoreCodeMapping mapping : appConfig.getStorecode()) {
-                    storeCodeMap.put(mapping.getMachine(), mapping.getCode());
-                    logger.debug("Storecode mapping: machine={} -> code={}", mapping.getMachine(), mapping.getCode());
+                    storeCodeMap.put(mapping.getMachine(), mapping);
+                    logger.debug("Storecode mapping: machine={} -> code={}, isVYoctopus={}",
+                            mapping.getMachine(), mapping.getCode(), mapping.getIsVYoctopus());
                 }
             } else {
                 logger.warn("No storecode mappings found in config.json");
@@ -285,7 +289,7 @@ public class TransactionProducer {
         }
     }
 
-    private static OrderModels.Order BuildModel(VBeTransaction transaction, Gson gson,Map<String, String> storeCodeMap
+    private static OrderModels.Order BuildModel(VBeTransaction transaction, Gson gson,Map<String, StoreCodeMapping> storeCodeMap
     ,List<TestProductMapping> productList, boolean testProductMode) {
         OrderModels.Order order = new OrderModels.Order();
         String orderNo;
@@ -311,7 +315,11 @@ public class TransactionProducer {
         String devid = transaction.getDevid();
         String orgNo = "19266";
         String authcode = "888";
-        String storecode = storeCodeMap.getOrDefault(transaction.getMachineName(), "071").toString(); // Default to 210
+        StoreCodeMapping defaultMapping = new StoreCodeMapping();
+        defaultMapping.code = "071";
+        defaultMapping.isVYoctopus = false;
+        String storecode = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getCode() + "";
+        boolean isVYoctopus = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getIsVYoctopus();
         String regioncode = "002";
         String corpcode = "601";
         String barcodeprefix = "210";
@@ -388,15 +396,23 @@ public class TransactionProducer {
         List<OrderModels.Payment> paymentList = new ArrayList<>();
         OrderModels.Payment payment = new OrderModels.Payment();
         String payType = transaction.getPayType();
-        if (price < 2.0) {
-            payment.setPayCode("VM1");
-            payment.setPayName("VM OCTOPUS 1 SALES");
-        } else if (price >= 2.0 && price <= 10.0) {
-            payment.setPayCode("VM2");
-            payment.setPayName("VM OCTOPUS 2 SALES");
+        if (isVYoctopus) {
+            payment.setPayCode("CSH");
+            payment.setPayName("CASH SALES");
+            logger.debug("isVYoctopus=true for machine={}: Set payCode=CSH, payName=CASH SALES", transaction.getMachineName());
         } else {
-            payment.setPayCode("VM3");
-            payment.setPayName("VM OCTOPUS 3 SALES");
+            if (price < 2.0) {
+                payment.setPayCode("VM1");
+                payment.setPayName("VM OCTOPUS 1 SALES");
+            } else if (price >= 2.0 && price <= 10.0) {
+                payment.setPayCode("VM2");
+                payment.setPayName("VM OCTOPUS 2 SALES");
+            } else {
+                payment.setPayCode("VM3");
+                payment.setPayName("VM OCTOPUS 3 SALES");
+            }
+            logger.debug("isVYoctopus=false for machine={}: Set payCode={}, payName={}",
+                    transaction.getMachineName(), payment.getPayCode(), payment.getPayName());
         }
         payment.setPayAmount(price);
         payment.setOriginalValue(0);
