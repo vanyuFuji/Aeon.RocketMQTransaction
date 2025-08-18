@@ -294,19 +294,16 @@ public class TransactionProducer {
         OrderModels.Order order = new OrderModels.Order();
         String orderNo;
         if (transaction.getId() != null && transaction.getMachineName() != null) {
-            String machineName = transaction.getMachineName();
-            // Calculate padding width for id: 32 - length of machineName
-            int idPaddingWidth = 32 - machineName.length();
-            // Pad id with leading zeros to idPaddingWidth
+            String machineDigits = transaction.getMachineName().replaceAll("[^0-9]", ""); // Extract digits only
+            int idPaddingWidth = 32 - machineDigits.length();
             String paddedId = String.format("%0" + idPaddingWidth + "d", transaction.getId());
-            // Concatenate machineName and paddedId
-            String concatString = machineName + paddedId;
-            // Ensure exactly 32 characters: truncate if too long
+            String concatString = machineDigits + paddedId;
             orderNo = concatString.length() > 32 ? concatString.substring(0, 32) : concatString;
+            logger.debug("Generated orderNo: {} (machineDigits: {})", orderNo, machineDigits);
         } else {
             orderNo = String.format("%032d", System.currentTimeMillis());
+            logger.debug("Generated orderNo (fallback): {}", orderNo);
         }
-        logger.debug("Generated orderNo: {}", orderNo);
 
         double price = transaction.getAmount() != null ? transaction.getAmount() : 0.1;
         String cashierNo = "0000000";
@@ -390,7 +387,7 @@ public class TransactionProducer {
         order.setHkSourceId("90");
         order.setHistoricalOrders(0);
         order.setDeliveryInfo(null);
-        order.setIgnoreAccountDate(true); // Add ignoreAccountDate property
+        order.setIgnoreAccountDate(ignoreAccountDate);
 
         // Payment list
         List<OrderModels.Payment> paymentList = new ArrayList<>();
