@@ -37,6 +37,7 @@ public class TransactionProducer {
     private static final Logger logger = LoggerFactory.getLogger(TransactionProducer.class);
     private static TransactionMQProducer producer = null; // Track producer state
     private static SqlSessionFactory sqlSessionFactory;
+
     public static class RocketMQConfig {
         private String namesrvAddr;
         private String producerGroup;
@@ -71,12 +72,17 @@ public class TransactionProducer {
         }
     }
 
-    public static class TestProductMapping{
+    public static class TestProductMapping {
         private String productName;
         private String itemCode;
 
-        public String getProductName(){return productName;}
-        public String getItemCode(){return itemCode;}
+        public String getProductName() {
+            return productName;
+        }
+
+        public String getItemCode() {
+            return itemCode;
+        }
     }
 
     public static class AppConfig {
@@ -84,18 +90,41 @@ public class TransactionProducer {
         private List<StoreCodeMapping> storeCode;
         private boolean testProductmode;
 
-        public boolean getTestProudctMode(){ return testProductmode;}
-        public long getSendInterval() { return sendInterval; }
-        public List<StoreCodeMapping> getStorecode() { return storeCode; }
+        public boolean getTestProudctMode() {
+            return testProductmode;
+        }
+
+        public long getSendInterval() {
+            return sendInterval;
+        }
+
+        public List<StoreCodeMapping> getStorecode() {
+            return storeCode;
+        }
     }
+
     public static class StoreCodeMapping {
         private String code;
         private String machine;
         private boolean isVYoctopus;
+        private String posNo;
 
-        public String getCode() { return code; }
-        public String getMachine() { return machine; }
-        public boolean getIsVYoctopus() { return isVYoctopus; }
+
+        public String getCode() {
+            return code;
+        }
+
+        public String getMachine() {
+            return machine;
+        }
+
+        public boolean getIsVYoctopus() {
+            return isVYoctopus;
+        }
+
+        public String getPosNo() {
+            return posNo;
+        }
     }
 
     private static int calculateEAN13CheckDigit(String barcode) {
@@ -145,8 +174,8 @@ public class TransactionProducer {
             if (appConfig.getStorecode() != null) {
                 for (StoreCodeMapping mapping : appConfig.getStorecode()) {
                     storeCodeMap.put(mapping.getMachine(), mapping);
-                    logger.debug("Storecode mapping: machine={} -> code={}, isVYoctopus={}",
-                            mapping.getMachine(), mapping.getCode(), mapping.getIsVYoctopus());
+                    logger.debug("Storecode mapping: machine={} -> code={}, isVYoctopus={}, posNo={}",
+                            mapping.getMachine(), mapping.getCode(), mapping.getIsVYoctopus(), mapping.getPosNo());
                 }
             } else {
                 logger.warn("No storecode mappings found in config.json");
@@ -167,7 +196,8 @@ public class TransactionProducer {
                  InputStreamReader reader = new InputStreamReader(inputStream)) {
                 JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
                 productList = gson.fromJson(jsonObject.getAsJsonArray("products"),
-                        new TypeToken<List<TestProductMapping>>(){}.getType());
+                        new TypeToken<List<TestProductMapping>>() {
+                        }.getType());
                 logger.info("Loaded {} product mappings from testproduct.json", productList.size());
                 for (TestProductMapping product : productList) {
                     logger.debug("Product mapping: itemCode={} -> productName={}", product.getItemCode(), product.getProductName());
@@ -190,7 +220,6 @@ public class TransactionProducer {
         if (sqlSessionFactory == null) {
             throw new RuntimeException("SqlSessionFactory is null after initialization attempt");
         }
-
 
 
         // Worker loop: poll database at intervals
@@ -289,32 +318,21 @@ public class TransactionProducer {
         }
     }
 
-    private static OrderModels.Order BuildModel(VBeTransaction transaction, Gson gson,Map<String, StoreCodeMapping> storeCodeMap
-    ,List<TestProductMapping> productList, boolean testProductMode) {
+    private static OrderModels.Order BuildModel(VBeTransaction transaction, Gson gson, Map<String, StoreCodeMapping> storeCodeMap
+            , List<TestProductMapping> productList, boolean testProductMode) {
         OrderModels.Order order = new OrderModels.Order();
         String orderNo;
-        if (transaction.getId() != null && transaction.getMachineName() != null) {
-            String machineDigits = transaction.getMachineName().replaceAll("[^0-9]", ""); // Extract digits only
-            int idPaddingWidth = 32 - machineDigits.length();
-            String paddedId = String.format("%0" + idPaddingWidth + "d", transaction.getId());
-            String concatString = machineDigits + paddedId;
-            orderNo = concatString.length() > 32 ? concatString.substring(0, 32) : concatString;
-            logger.debug("Generated orderNo: {} (machineDigits: {})", orderNo, machineDigits);
-        } else {
-            orderNo = String.format("%032d", System.currentTimeMillis());
-            logger.debug("Generated orderNo (fallback): {}", orderNo);
-        }
-
+        StoreCodeMapping defaultMapping = new StoreCodeMapping();
+        defaultMapping.posNo = "777";
+        defaultMapping.code = "071";
+        defaultMapping.isVYoctopus = false;
         double price = transaction.getAmount() != null ? transaction.getAmount() : 0.1;
         String cashierNo = "0000000";
-        String posNo = "777";//first 777, second 888 same shop
+        String posNo = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getPosNo();//first 777, second 778 same shop
         String cardNo = transaction.getPayUserId();
         String devid = transaction.getDevid();
         String orgNo = "19266";
         String authcode = "888";
-        StoreCodeMapping defaultMapping = new StoreCodeMapping();
-        defaultMapping.code = "071";
-        defaultMapping.isVYoctopus = false;
         String storecode = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getCode() + "";
         boolean isVYoctopus = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getIsVYoctopus();
         String regioncode = "002";
@@ -322,6 +340,36 @@ public class TransactionProducer {
         String barcodeprefix = "210";
         String itemcode = transaction.getBarCode();
         String skuname;
+
+        if (transaction.getId() != null && transaction.getMachineName() != null) {
+            String machineDigits = transaction.getMachineName().replaceAll("[^0-9]", "");
+            if (storecode.length() != 3) {
+                logger.warn("storeNo must be 3 digits, using default '071' for machine={}", transaction.getMachineName());
+                storecode = "071";
+            }
+            int idPaddingWidth = 32 - machineDigits.length();
+            String paddedId = String.format("%0" + idPaddingWidth + "d", transaction.getId());
+            String concatString = machineDigits + paddedId;
+            // Replace positions 5-7 (characters 4-6, 0-based) with storeNo
+            StringBuilder orderNoBuilder = new StringBuilder(concatString);
+            if (concatString.length() >= 7) {
+                orderNoBuilder.replace(4, 7, storecode);
+            } else {
+                logger.warn("concatString too short ({}) to replace positions 5-7, using original", concatString);
+            }
+            orderNo = orderNoBuilder.toString();
+            if (orderNo.length() > 32) {
+                orderNo = orderNo.substring(0, 32);
+
+                logger.debug("Generated orderNo: {} (machineDigits: {})", orderNo, machineDigits);
+            }
+
+        } else {
+            orderNo = String.format("%032d", System.currentTimeMillis());
+            logger.debug("Generated orderNo (fallback): {}", orderNo);
+        }
+
+
         if (testProductMode && !productList.isEmpty()) {
             TestProductMapping product = productList.get(random.nextInt(productList.size()));
             itemcode = product.getItemCode();
@@ -472,3 +520,7 @@ public class TransactionProducer {
         }
     }
 }
+
+
+
+
