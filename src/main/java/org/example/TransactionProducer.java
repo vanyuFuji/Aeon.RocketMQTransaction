@@ -343,17 +343,17 @@ public class TransactionProducer {
 
         if (transaction.getId() != null && transaction.getMachineName() != null) {
             String machineDigits = transaction.getMachineName().replaceAll("[^0-9]", "");
-            if (storecode.length() != 3) {
-                logger.warn("storeNo must be 3 digits, using default '071' for machine={}", transaction.getMachineName());
-                storecode = "071";
+            if (posNo.length() != 3) {
+                logger.warn("posNo must be 3 digits, using default '777' for machine={}", posNo);
+                posNo="777";
             }
             int idPaddingWidth = 32 - machineDigits.length();
             String paddedId = String.format("%0" + idPaddingWidth + "d", transaction.getId());
             String concatString = machineDigits + paddedId;
-            // Replace positions 5-7 (characters 4-6, 0-based) with storeNo
+            // Replace positions 5-7 (characters 4-6, 0-based) with posno
             StringBuilder orderNoBuilder = new StringBuilder(concatString);
-            if (concatString.length() >= 7) {
-                orderNoBuilder.replace(4, 7, storecode);
+            if (concatString.length() >= 8) {
+                orderNoBuilder.replace(5, 8, posNo);
             } else {
                 logger.warn("concatString too short ({}) to replace positions 5-7, using original", concatString);
             }
