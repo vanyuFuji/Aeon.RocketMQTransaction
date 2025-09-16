@@ -14,31 +14,31 @@
       {
         "code": "071",
         "machine": "Aeon-0001",
-        "isVYoctopus":true,
+        "VYdevId":"58F2C4",
         "posNo": "777"
       },
       {
         "code": "067",
         "machine": "Aeon-0002",
-        "isVYoctopus":true,
+        "VYdevId":"5C028E",
         "posNo": "777"
       },
 	  {
         "code": "001",
         "machine": "Aeon-0004",
-        "isVYoctopus":true,
+        "VYdevId":"58F4E0",
         "posNo": "778"
       },
 	  {
         "code": "001",
         "machine": "Aeon-0005",
-        "isVYoctopus":true,
+        "VYdevId":"58F4E1",
         "posNo": "777"
       },
 	   {
         "code": "007",
         "machine": "Aeon-0003",
-        "isVYoctopus":true
+        "VYdevId":"58F2BD"
         ,"posNo": "777"
       }
     ]

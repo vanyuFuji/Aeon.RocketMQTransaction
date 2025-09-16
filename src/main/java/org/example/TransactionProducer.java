@@ -106,7 +106,7 @@ public class TransactionProducer {
     public static class StoreCodeMapping {
         private String code;
         private String machine;
-        private boolean isVYoctopus;
+        private String VYdevId;
         private String posNo;
 
 
@@ -118,8 +118,8 @@ public class TransactionProducer {
             return machine;
         }
 
-        public boolean getIsVYoctopus() {
-            return isVYoctopus;
+        public String getVYdevId() {
+            return VYdevId;
         }
 
         public String getPosNo() {
@@ -174,8 +174,8 @@ public class TransactionProducer {
             if (appConfig.getStorecode() != null) {
                 for (StoreCodeMapping mapping : appConfig.getStorecode()) {
                     storeCodeMap.put(mapping.getMachine(), mapping);
-                    logger.debug("Storecode mapping: machine={} -> code={}, isVYoctopus={}, posNo={}",
-                            mapping.getMachine(), mapping.getCode(), mapping.getIsVYoctopus(), mapping.getPosNo());
+                    logger.debug("Storecode mapping: machine={} -> code={}, getVYdevId={}, posNo={}",
+                            mapping.getMachine(), mapping.getCode(), mapping.getVYdevId(), mapping.getPosNo());
                 }
             } else {
                 logger.warn("No storecode mappings found in config.json");
@@ -325,7 +325,8 @@ public class TransactionProducer {
         StoreCodeMapping defaultMapping = new StoreCodeMapping();
         defaultMapping.posNo = "777";
         defaultMapping.code = "071";
-        defaultMapping.isVYoctopus = false;
+        defaultMapping.VYdevId = "DEV000";
+        StoreCodeMapping mapping = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping);
         double price = transaction.getAmount() != null ? transaction.getAmount() : 0.1;
         String cashierNo = "0000000";
         String posNo = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getPosNo();//first 777, second 778 same shop
@@ -334,7 +335,9 @@ public class TransactionProducer {
         String orgNo = "19266";
         String authcode = "888";
         String storecode = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getCode() + "";
-        boolean isVYoctopus = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getIsVYoctopus();
+        String transactionDevId = transaction.getDevid() != null ? transaction.getDevid() : "";
+        String transactionMachineNumber = transaction.getMachineNumber() != null ? transaction.getMachineNumber() : "";
+        boolean useCashSales = transactionMachineNumber.equals(mapping.getMachine()) && transactionDevId.equals(mapping.getVYdevId());
         String regioncode = "002";
         String corpcode = "601";
         String barcodeprefix = "210";
@@ -441,10 +444,11 @@ public class TransactionProducer {
         List<OrderModels.Payment> paymentList = new ArrayList<>();
         OrderModels.Payment payment = new OrderModels.Payment();
         String payType = transaction.getPayType();
-        if (isVYoctopus) {
+        if (useCashSales) {
             payment.setPayCode("CSH");
             payment.setPayName("CASH SALES");
-            logger.debug("isVYoctopus=true for machine={}: Set payCode=CSH, payName=CASH SALES", transaction.getMachineName());
+            logger.debug("machineNumber={} and VYdevId={} match config: Set payCode=CSH, payName=CASH SALES",
+                    transaction.getMachineNumber(), transaction.getDevid());
         } else {
             if (price < 2.0) {
                 payment.setPayCode("VM1");
@@ -456,8 +460,8 @@ public class TransactionProducer {
                 payment.setPayCode("VM3");
                 payment.setPayName("VM OCTOPUS 3 SALES");
             }
-            logger.debug("isVYoctopus=false for machine={}: Set payCode={}, payName={}",
-                    transaction.getMachineName(), payment.getPayCode(), payment.getPayName());
+            logger.debug("machineNumber={} or VYdevId={} do not match config: Set payCode={}, payName={}",
+                    transaction.getMachineNumber(), transaction.getDevid(), payment.getPayCode(), payment.getPayName());
         }
         payment.setPayAmount(price);
         payment.setOriginalValue(0);
