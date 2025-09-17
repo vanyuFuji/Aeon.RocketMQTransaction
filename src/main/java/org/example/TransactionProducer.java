@@ -326,18 +326,18 @@ public class TransactionProducer {
         defaultMapping.posNo = "777";
         defaultMapping.code = "071";
         defaultMapping.VYdevId = "DEV000";
-        StoreCodeMapping mapping = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping);
+        StoreCodeMapping mapping = storeCodeMap.getOrDefault(transaction.getMachineNumber(), defaultMapping);
         double price = transaction.getAmount() != null ? transaction.getAmount() : 0.1;
         String cashierNo = "0000000";
-        String posNo = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getPosNo();//first 777, second 778 same shop
+        String posNo = storeCodeMap.getOrDefault(transaction.getMachineNumber(), defaultMapping).getPosNo();//first 777, second 778 same shop
         String cardNo = transaction.getPayUserId();
         String devid = transaction.getDevid();
         String orgNo = "19266";
         String authcode = "888";
-        String storecode = storeCodeMap.getOrDefault(transaction.getMachineName(), defaultMapping).getCode() + "";
-        String transactionDevId = transaction.getDevid() != null ? transaction.getDevid() : "";
+        String storecode = storeCodeMap.getOrDefault(transaction.getMachineNumber(), defaultMapping).getCode() + "";
         String transactionMachineNumber = transaction.getMachineNumber() != null ? transaction.getMachineNumber() : "";
-        boolean useCashSales = transactionMachineNumber.equals(mapping.getMachine()) && transactionDevId.equals(mapping.getVYdevId());
+        boolean useCashSales = transactionMachineNumber.equals(mapping.getMachine()) && devid.equals(mapping.getVYdevId());
+        logger.debug("transactionMachineNumber={},getmachine={},transactionmachinename={}",transactionMachineNumber,mapping.getMachine(),transaction.getMachineName());
         String regioncode = "002";
         String corpcode = "601";
         String barcodeprefix = "210";

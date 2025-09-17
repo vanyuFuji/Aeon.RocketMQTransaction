@@ -13,33 +13,51 @@
     "storeCode": [
       {
         "code": "071",
-        "machine": "Aeon-0001",
+        "machine": "CDW-01",//"Aeon-0001",
         "VYdevId":"58F2C4",
         "posNo": "777"
       },
       {
         "code": "067",
-        "machine": "Aeon-0002",
+        "machine": "FH-01",//"Aeon-0002",
         "VYdevId":"5C028E",
         "posNo": "777"
       },
 	  {
         "code": "001",
-        "machine": "Aeon-0004",
+        "machine": "KH-02",//"Aeon-0004",
         "VYdevId":"58F4E0",
         "posNo": "778"
       },
 	  {
         "code": "001",
-        "machine": "Aeon-0005",
+        "machine": "KH-01",//"Aeon-0005",
         "VYdevId":"58F4E1",
         "posNo": "777"
       },
 	   {
         "code": "007",
-        "machine": "Aeon-0003",
+        "machine": "WP-01",//,"Aeon-0003",
         "VYdevId":"58F2BD"
         ,"posNo": "777"
+      },
+      {
+        "code": "002",
+        "machine": "TW-01",//,"Aeon-0008",
+        "VYdevId":"XXXX",
+        "posNo": "777"
+      },
+      {
+        "code": "104",
+        "machine": "LOH-01",//,"Aeon-0007",
+        "VYdevId":"58F4D9",
+        "posNo": "777"
+      },
+      {
+        "code": "120",
+        "machine": "FFS-01",//,"Aeon-0006",
+        "VYdevId":"58F4D8",
+        "posNo": "777"
       }
     ]
   }
