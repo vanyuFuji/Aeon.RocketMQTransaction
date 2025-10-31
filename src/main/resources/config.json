@@ -1,6 +1,6 @@
 {
   "rocketmq": {
-    "namesrvAddr": "10.10.232.138:9876;10.10.232.139:9876",
+    "namesrvAddr": "192.2.32.165:9876;192.2.32.166:9876",
     "producerGroup": "cloudpos_order_salesorder_group",
     "topic": "cloudpos_order_salesorder_topic",
     "tag": "salesOrderTag",
@@ -9,7 +9,7 @@
   },
   "app": {
     "sendInterval": 60000,
-    "testProductmode": true,
+    "testProductmode": false,
     "storeCode": [
       {
         "code": "071",
@@ -20,7 +20,7 @@
       {
         "code": "067",
         "machine": "FH-01",//"Aeon-0002",
-        "VYdevId":"5C028E",
+        "VYdevId":"XX028E",
         "posNo": "777"
       },
 	  {
@@ -38,7 +38,7 @@
 	   {
         "code": "007",
         "machine": "WP-01",//,"Aeon-0003",
-        "VYdevId":"58F2BD"
+        "VYdevId":"58F4D9"
         ,"posNo": "777"
       },
       {
@@ -57,6 +57,12 @@
         "code": "120",
         "machine": "FFS-01",//,"Aeon-0006",
         "VYdevId":"58F4D8",
+        "posNo": "777"
+      },
+      {
+        "code": "124",
+        "machine": "TYM-01",//,"Aeon-0009",
+        "VYdevId":"XX090F",
         "posNo": "777"
       }
     ]
