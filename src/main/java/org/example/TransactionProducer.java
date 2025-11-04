@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
+import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -157,7 +157,7 @@ public class TransactionProducer {
         List<TestProductMapping> productList = new ArrayList<>();
 
         try (InputStream inputStream = Files.newInputStream(configPath);
-             InputStreamReader reader = new InputStreamReader(inputStream)) {
+             InputStreamReader reader = new InputStreamReader(inputStream,StandardCharsets.UTF_8)) {
             JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
             rocketMQConfig = gson.fromJson(jsonObject.getAsJsonObject("rocketmq"), RocketMQConfig.class);
             appConfig = gson.fromJson(jsonObject.getAsJsonObject("app"), AppConfig.class);
@@ -221,42 +221,43 @@ public class TransactionProducer {
             throw new RuntimeException("SqlSessionFactory is null after initialization attempt");
         }
 
+        // Initialize producer only when transactions are found
+        if (producer == null) {
+            logger.info("Initializing producer...");
+            producer = new TransactionMQProducer(rocketMQConfig.getProducerGroup());
+            producer.setNamesrvAddr(rocketMQConfig.getNamesrvAddr());
+            producer.setRetryTimesWhenSendFailed(rocketMQConfig.getRetryTimes());
+            producer.setSendMsgTimeout(rocketMQConfig.getSendTimeout());
+            producer.setVipChannelEnabled(false);
+            producer.setTransactionListener(new TransactionListenerImpl());
+            try {
+                producer.start();
+                logger.info("Producer started successfully");
+                // Add shutdown hook
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    if (producer != null) {
+                        producer.shutdown();
+                        logger.info("Producer shut down via shutdown hook");
+                    }
+                }));
+            } catch (Exception e) {
+                logger.error("Failed to start producer: {}", e.getMessage(), e);
+                throw e;
+            }
 
-        // Worker loop: poll database at intervals
-        while (true) {
-            try (SqlSession session = sqlSessionFactory.openSession()) {
-                VBeTransactionMapper mapper = session.getMapper(VBeTransactionMapper.class);
-                List<VBeTransaction> transactions = null;
-                try {
-                    logger.debug("Polling V_BE_Transaction");
-                    transactions = mapper.selectAll();
-                    logger.debug("Queried V_BE_Transaction, found {} rows", transactions != null ? transactions.size() : 0);
-                    if (transactions == null || transactions.isEmpty()) {
-                        logger.info("No unprocessed data found in V_BE_Transaction");
-                    } else {
-                        // Initialize producer only when transactions are found
-                        if (producer == null) {
-                            logger.info("Found {} unprocessed transactions. Initializing producer.", transactions.size());
-                            producer = new TransactionMQProducer(rocketMQConfig.getProducerGroup());
-                            producer.setNamesrvAddr(rocketMQConfig.getNamesrvAddr());
-                            producer.setRetryTimesWhenSendFailed(rocketMQConfig.getRetryTimes());
-                            producer.setSendMsgTimeout(rocketMQConfig.getSendTimeout());
-                            producer.setVipChannelEnabled(false);
-                            producer.setTransactionListener(new TransactionListenerImpl());
-                            try {
-                                producer.start();
-                                logger.info("Producer started successfully");
-                                // Add shutdown hook
-                                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                                    if (producer != null) {
-                                        producer.shutdown();
-                                        logger.info("Producer shut down via shutdown hook");
-                                    }
-                                }));
-                            } catch (Exception e) {
-                                logger.error("Failed to start producer: {}", e.getMessage(), e);
-                                throw e;
-                            }
+            // Worker loop: poll database at intervals
+            while (true) {
+                try (SqlSession session = sqlSessionFactory.openSession()) {
+                    VBeTransactionMapper mapper = session.getMapper(VBeTransactionMapper.class);
+                    List<VBeTransaction> transactions = null;
+                    try {
+                        logger.debug("Polling V_BE_Transaction");
+                        transactions = mapper.selectAll();
+                        logger.debug("Queried V_BE_Transaction, found {} rows", transactions != null ? transactions.size() : 0);
+                        if (transactions == null || transactions.isEmpty()) {
+                            logger.info("No unprocessed data found in V_BE_Transaction");
+                        } else {
+
                         }
                         for (VBeTransaction transaction : transactions) {
                             // Log raw row data
@@ -287,7 +288,11 @@ public class TransactionProducer {
 
                             try {
                                 TransactionSendResult sendResult = producer.sendMessageInTransaction(msg, null);
-                                logger.info("Message sent: ID={}, Status={}", sendResult.getMsgId(), sendResult.getLocalTransactionState());
+                                logger.info("Message sent: ID={}, Key(OrderNo)={}, Status={}",
+                                        sendResult.getMsgId(),
+                                        order.getOrderNo(),  // This is the key
+                                        sendResult.getLocalTransactionState()
+                                );
                                 // Mark as processed
                                 try (SqlSession updateSession = sqlSessionFactory.openSession()) {
                                     VBeTransactionMapper updateMapper = updateSession.getMapper(VBeTransactionMapper.class);
@@ -300,20 +305,20 @@ public class TransactionProducer {
                             }
 
                         }
+                    } catch (Exception e) {
+                        logger.error("Error querying V_BE_Transaction: {}", e.getMessage(), e);
                     }
-                } catch (Exception e) {
-                    logger.error("Error querying V_BE_Transaction: {}", e.getMessage(), e);
                 }
-            }
 
-            // Wait for the next polling interval
-            try {
-                logger.debug("Sleeping for {}ms before next poll", appConfig.getSendInterval());
-                Thread.sleep(appConfig.getSendInterval());
-            } catch (InterruptedException e) {
-                logger.error("Sleep interrupted: {}", e.getMessage(), e);
-                Thread.currentThread().interrupt();
-                break;
+                // Wait for the next polling interval
+                try {
+                    logger.debug("Sleeping for {}ms before next poll", appConfig.getSendInterval());
+                    Thread.sleep(appConfig.getSendInterval());
+                } catch (InterruptedException e) {
+                    logger.error("Sleep interrupted: {}", e.getMessage(), e);
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         }
     }
@@ -519,7 +524,10 @@ public class TransactionProducer {
 
         @Override
         public LocalTransactionState checkLocalTransaction(MessageExt msg) {
-            logger.info("Checking transaction for msg: {}", msg.getMsgId());
+            logger.info("Checking transaction for msg: ID={}, Key(OrderNo)={}",
+                    msg.getMsgId(),
+                    msg.getKeys()  // This will match the order.getOrderNo()
+            );
             return LocalTransactionState.COMMIT_MESSAGE;
         }
     }
