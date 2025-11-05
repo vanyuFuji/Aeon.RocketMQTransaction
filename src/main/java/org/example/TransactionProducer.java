@@ -193,7 +193,7 @@ public class TransactionProducer {
                 throw new java.io.FileNotFoundException("Error: testproduct.json not found");
             }
             try (InputStream inputStream = Files.newInputStream(productPath);
-                 InputStreamReader reader = new InputStreamReader(inputStream)) {
+                 InputStreamReader reader = new InputStreamReader(inputStream,StandardCharsets.UTF_8)) {
                 JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
                 productList = gson.fromJson(jsonObject.getAsJsonArray("products"),
                         new TypeToken<List<TestProductMapping>>() {
@@ -287,19 +287,13 @@ public class TransactionProducer {
                             msg.putUserProperty("OrderSource", "POS");
 
                             try {
-                                TransactionSendResult sendResult = producer.sendMessageInTransaction(msg, null);
+                                TransactionSendResult sendResult = producer.sendMessageInTransaction(msg, transaction);
                                 logger.info("Message sent: ID={}, Key(OrderNo)={}, Status={}",
                                         sendResult.getMsgId(),
                                         order.getOrderNo(),  // This is the key
                                         sendResult.getLocalTransactionState()
                                 );
-                                // Mark as processed
-                                try (SqlSession updateSession = sqlSessionFactory.openSession()) {
-                                    VBeTransactionMapper updateMapper = updateSession.getMapper(VBeTransactionMapper.class);
-                                    updateMapper.markAsProcessed(transaction.getId(), sendResult.getMsgId());
-                                    updateSession.commit();
-                                    logger.debug("Marked transaction as processed: id={}, ProcessedId={}", transaction.getId(), sendResult.getMsgId());
-                                }
+
                             } catch (Exception e) {
                                 logger.error("Send failed for transaction={}: {}", transaction.getId(), e.getMessage(), e);
                             }
@@ -512,21 +506,44 @@ public class TransactionProducer {
 
         @Override
         public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
-            logger.info("Executing local transaction for msg: {}", new String(msg.getBody()));
-            try {
-                // Simulate business logic
-                return LocalTransactionState.COMMIT_MESSAGE;
-            } catch (Exception e) {
-                logger.error("Transaction error: {}", e.getMessage(), e);
-                return LocalTransactionState.UNKNOW;
+            // Cast the argument back to our transaction object
+            VBeTransaction transaction = (VBeTransaction) arg;
+
+            // This is the unique ID for this specific transaction
+            String transactionId = msg.getTransactionId();
+
+            logger.info("Executing local transaction: Key(OrderNo)={}, TransactionId={}",
+                    msg.getKeys(), transactionId);
+
+            try (SqlSession session = TransactionProducer.sqlSessionFactory.openSession()) {
+                try {
+                    VBeTransactionMapper mapper = session.getMapper(VBeTransactionMapper.class);
+
+                    // Perform the database update
+                    mapper.markAsProcessed(transaction.getId(), transactionId);
+
+                    // Commit the database transaction
+                    session.commit();
+
+                    logger.info("Local transaction success, committing message. id={}", transaction.getId());
+                    // Return COMMIT, which tells the broker to send the message
+                    return LocalTransactionState.COMMIT_MESSAGE;
+
+                } catch (Exception e) {
+                    logger.error("Local transaction failed, rolling back. id={}: {}", transaction.getId(), e.getMessage(), e);
+                    session.rollback();
+                    // Return ROLLBACK, which tells the broker to discard the message
+                    return LocalTransactionState.ROLLBACK_MESSAGE;
+                }
             }
         }
 
         @Override
         public LocalTransactionState checkLocalTransaction(MessageExt msg) {
-            logger.info("Checking transaction for msg: ID={}, Key(OrderNo)={}",
+            logger.info("Checking transaction for msg: ID={}, Key(OrderNo)={}, TransactionId={}",
                     msg.getMsgId(),
-                    msg.getKeys()  // This will match the order.getOrderNo()
+                    msg.getKeys(),
+                    msg.getTransactionId()
             );
             return LocalTransactionState.COMMIT_MESSAGE;
         }
