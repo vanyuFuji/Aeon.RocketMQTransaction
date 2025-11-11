@@ -35,7 +35,7 @@ import java.util.Random;
 public class TransactionProducer {
     private static final Random random = new Random();
     private static final Logger logger = LoggerFactory.getLogger(TransactionProducer.class);
-    private static TransactionMQProducer producer = null; // Track producer state
+    private static DefaultMQProducer producer = null; // Track producer state
     private static SqlSessionFactory sqlSessionFactory;
 
     public static class RocketMQConfig {
@@ -224,12 +224,12 @@ public class TransactionProducer {
         // Initialize producer only when transactions are found
         if (producer == null) {
             logger.info("Initializing producer...");
-            producer = new TransactionMQProducer(rocketMQConfig.getProducerGroup());
+            producer = new DefaultMQProducer(rocketMQConfig.getProducerGroup());
             producer.setNamesrvAddr(rocketMQConfig.getNamesrvAddr());
             producer.setRetryTimesWhenSendFailed(rocketMQConfig.getRetryTimes());
             producer.setSendMsgTimeout(rocketMQConfig.getSendTimeout());
             producer.setVipChannelEnabled(false);
-            producer.setTransactionListener(new TransactionListenerImpl());
+            //producer.setTransactionListener(new TransactionListenerImpl());
             try {
                 producer.start();
                 logger.info("Producer started successfully");
@@ -287,12 +287,24 @@ public class TransactionProducer {
                             msg.putUserProperty("OrderSource", "POS");
 
                             try {
-                                TransactionSendResult sendResult = producer.sendMessageInTransaction(msg, transaction);
+                                SendResult sendResult = producer.send(msg);
                                 logger.info("Message sent: ID={}, Key(OrderNo)={}, Status={}",
                                         sendResult.getMsgId(),
                                         order.getOrderNo(),  // This is the key
-                                        sendResult.getLocalTransactionState()
+                                        sendResult.getSendStatus()
                                 );
+
+                                // Update database directly after successful send
+                                if (sendResult.getSendStatus() == SendStatus.SEND_OK) {
+                                    try {
+                                        mapper.markAsProcessed(transaction.getId(), sendResult.getMsgId());
+                                        session.commit();
+                                        logger.info("Database updated for transaction id={}", transaction.getId());
+                                    } catch (Exception e) {
+                                        logger.error("Failed to update database for id={}: {}",
+                                                transaction.getId(), e.getMessage(), e);
+                                    }
+                                }
 
                             } catch (Exception e) {
                                 logger.error("Send failed for transaction={}: {}", transaction.getId(), e.getMessage(), e);
@@ -501,7 +513,7 @@ public class TransactionProducer {
     }
 
 
-    static class TransactionListenerImpl implements TransactionListener {
+  /*  static class TransactionListenerImpl implements TransactionListener {
         private static final Logger logger = LoggerFactory.getLogger(TransactionListenerImpl.class);
 
         @Override
@@ -547,7 +559,7 @@ public class TransactionProducer {
             );
             return LocalTransactionState.COMMIT_MESSAGE;
         }
-    }
+    }*/
 }
 
 
